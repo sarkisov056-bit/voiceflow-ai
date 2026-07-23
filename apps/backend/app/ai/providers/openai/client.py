@@ -52,7 +52,7 @@ class OpenAIClient:
         model: str,
         input_items: list[dict[str, Any]],
         instructions: str | None,
-        temperature: float,
+        temperature: float | None,
     ) -> Any:
         """Call OpenAI's Responses API and return the raw SDK response.
 
@@ -62,7 +62,10 @@ class OpenAIClient:
                 the Responses API's ``input`` parameter (see
                 ``mapper.py``).
             instructions: The system/instructions prompt for the model.
-            temperature: Sampling temperature.
+            temperature: Sampling temperature. Some models (e.g. OpenAI's
+                reasoning models) reject this parameter entirely, so it
+                is only included in the request when explicitly set
+                (not ``None``).
 
         Returns:
             The raw ``Response`` object returned by the OpenAI SDK.
@@ -72,13 +75,16 @@ class OpenAIClient:
                 (network error, rate limiting, invalid request, server
                 error, etc.).
         """
+        request_kwargs: dict[str, Any] = {
+            "model": model,
+            "input": input_items,
+            "instructions": instructions,
+        }
+        if temperature is not None:
+            request_kwargs["temperature"] = temperature
+
         try:
-            return await self._sdk_client.responses.create(
-                model=model,
-                input=input_items,
-                instructions=instructions,
-                temperature=temperature,
-            )
+            return await self._sdk_client.responses.create(**request_kwargs)
         except openai.APIError as exc:
             raise AIProviderError(f"OpenAI API request failed: {exc}") from exc
 
@@ -88,7 +94,7 @@ class OpenAIClient:
         model: str,
         input_items: list[dict[str, Any]],
         instructions: str | None,
-        temperature: float,
+        temperature: float | None,
     ) -> AsyncIterator[Any]:
         """Call OpenAI's Responses API in streaming mode.
 
@@ -102,7 +108,10 @@ class OpenAIClient:
                 the Responses API's ``input`` parameter (see
                 ``mapper.py``).
             instructions: The system/instructions prompt for the model.
-            temperature: Sampling temperature.
+            temperature: Sampling temperature. Some models (e.g. OpenAI's
+                reasoning models) reject this parameter entirely, so it
+                is only included in the request when explicitly set
+                (not ``None``).
 
         Yields:
             Raw streaming event objects as returned by the OpenAI SDK.
@@ -112,13 +121,16 @@ class OpenAIClient:
                 (network error, rate limiting, invalid request, server
                 error, etc.).
         """
+        request_kwargs: dict[str, Any] = {
+            "model": model,
+            "input": input_items,
+            "instructions": instructions,
+        }
+        if temperature is not None:
+            request_kwargs["temperature"] = temperature
+
         try:
-            async with self._sdk_client.responses.stream(
-                model=model,
-                input=input_items,
-                instructions=instructions,
-                temperature=temperature,
-            ) as stream:
+            async with self._sdk_client.responses.stream(**request_kwargs) as stream:
                 async for event in stream:
                     yield event
         except openai.APIError as exc:

@@ -36,14 +36,16 @@ class GenerationRequest:
         messages: The conversation history to send to the model, in
             chronological order.
         temperature: Sampling temperature controlling response
-            randomness. Interpretation is provider-specific, but the
-            value is always a float.
+            randomness. Interpretation is provider-specific. ``None``
+            means "use the provider/model's default" — this matters
+            because some models (e.g. OpenAI's reasoning models) reject
+            this parameter entirely if it is set at all.
         model: The name/identifier of the model to use for generation.
     """
 
     system_prompt: str
     messages: list[ConversationMessage] = field(default_factory=list)
-    temperature: float = 0.7
+    temperature: float | None = None
     model: str = ""
 
 
